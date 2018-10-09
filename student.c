@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-stu_t ini_STU(int num){
-	stu_t student;
-	student.num = num;
+struct stu* ini_STU(int num){
+	struct stu *student= (struct stu*) malloc(sizeof(student));
+	student->num = num;
 	srand(time(NULL));
-	student.time = rand() %(31-3)+3;
-	student.state = 0;
+	student->times = rand() %(31-3)+3;
+	student->state = 0;
+	return student;
 }

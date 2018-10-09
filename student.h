@@ -2,8 +2,9 @@
 #define stu_h
 struct stu{
 	int num;
-	int time;
+	int times;
 	int state; //if being helped or not
 }stu_t;
 
-stu_t init_STU(int num);
+struct stu init_STU(int num);
+#endif
