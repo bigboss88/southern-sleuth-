@@ -6,3 +6,5 @@ student.o: student.c student.h
 	gcc -c student.c
 ta.o: ta.c ta.h
 	gcc -c ta.c
+clean:
+	rm *.o run

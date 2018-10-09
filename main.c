@@ -7,8 +7,11 @@
 #include "ta.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_t threads[4];
+static pthread_mutex_t mutex2= PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_init(&mutex2,NULL);
+static pthread_t threads[4];
 static int timea =0;
+
 int gentime(int timeb){
 	srand(time(NULL));
 	return rand() %(timeb+1-0)+0;
@@ -30,9 +33,12 @@ int any_chairs(struct stu* chairs[],int num){
 int set_ta_job(struct ta *tas[],struct stu *stu){
 	int i=0;
 	for(i;i<4;i++){
-		if(tas[i]->busy ==0){
+		//printf("%d\n",tas[i] );
+		if(tas[i]->busy ==0 && stu!=NULL && tas[i]->timel>0){
+			//printf("%d\n",stu->num );
 			tas[i]->student =stu;
 			tas[i]->busy=1;
+			printf("Ta %d is helping stu %d\n",i,tas[i]->student->num);
 			return 1;
 		}
 	}
@@ -51,25 +57,30 @@ void find_chair(struct stu* chairs[],int num,struct stu *stu){
 }
 
 void work(void* t){
-	printf("Doing Work\n");
-	pthread_mutex_lock(&mutex);
-	struct ta *td = (struct ta*) t;
-	timea+=td->student->times;
 
-	sleep(1);
-	//sleep(td->student->times);
+	struct ta *td = (struct ta*) t;
+	printf("Doing Work on Student %d and ta has %d time left\n",td->student->num,td->timel);
+	pthread_mutex_lock(&mutex);
+	timea+=td->student->times;
+	pthread_mutex_unlock(&mutex);
+	//sleep(1);
+	sleep(td->student->times);
+	pthread_mutex_lock(&mutex2);
 	td->timel = td->timel- td->student->times;
 	td->busy =0;
 	printf("Student %d is going to pass this assignment\n",td->student->num);
 	td->student->state=2;
-	pthread_mutex_unlock(&mutex);
+	pthread_mutex_unlock(&mutex2);
+	pthread_join(pthread_self(),NULL);
+
 }
 void start_threads(struct ta *tas[]){
 	int i=0;
 	for(i;i<4;i++){
-		if(tas[i]->busy==1){
-			printf("Ctreating thread %d\n",i );
-			pthread_create(threads[i],NULL,&work,(void *) tas[i]);
+		if(tas[i]!=NULL && tas[i]->busy==1){
+			//printf("Ctreating thread %d\n",i );
+			pthread_create(&threads[i],NULL,&work,tas[i]);
+			//printf("Created thread\n");
 		}
 	}
 }
@@ -77,7 +88,7 @@ void start_threads(struct ta *tas[]){
 void join_threads(struct ta *tas[]){
 	int i=0;
 	for(i;i<4;i++){
-		if(tas[i]->busy==0){
+		if(tas[i]->busy==1){
 			pthread_join(threads[i],NULL);
 		}
 	}
@@ -94,7 +105,7 @@ int any_time(struct ta *tas[]){
 int clear(struct stu* chairs[],int num){
 	int i=0;
 	for(i;i<num;i++){
-		if(chairs[i]->state ==2){
+		if(chairs[i]!=NULL && chairs[i]->state ==2){
 			chairs[i] ==NULL;
 		}
 	}
@@ -128,20 +139,22 @@ int steps =0;
 		struct stu *student= ini_STU(num_stu);
 		num_stu++;
 		if(any_chairs(chairs,num_chairs)==0){
-			printf("Student %d is not taking a chance in the lab with their assignment",student->num);
+			printf("Student %d is not taking a chance in the lab with their assignment\n",student->num);
 		}
 		else{
 			find_chair(chairs,num_chairs,student);
 		}
 
 		i=0;
-		for(i;i<4;i++){
-			set_ta_job(tas,&chairs[i]);
+		for(i;i<num_chairs;i++){
+
+			if(set_ta_job(tas,chairs[i])==1){
+				chairs[i]=NULL;
+			}; //if Ta is helping remove student from chair
 		}
-		printf("Creating pthreads\n" );
+		//printf("Creating pthreads\n" );
 		start_threads(tas);
-		printf("Joinging pthreads\n" );
-		join_threads(tas);
+		//printf("Joinging pthreads\n" );
 		sleep(1);
 		printf("Time: %d\n",timea );
 	}
